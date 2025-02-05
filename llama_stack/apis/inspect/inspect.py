@@ -4,11 +4,14 @@
 # This source code is licensed under the terms described in the LICENSE file in
 # the root directory of this source tree.
 
-from typing import List, Protocol, runtime_checkable
+from typing import List, Protocol, runtime_checkable, Any
 
 from pydantic import BaseModel
 
 from llama_stack.schema_utils import json_schema_type, webmethod
+from llama_stack.distribution.datatypes import (
+    UserConfig,
+)
 
 
 @json_schema_type
@@ -35,6 +38,8 @@ class HealthInfo(BaseModel):
 class VersionInfo(BaseModel):
     version: str
 
+class InspectConfigResponse(BaseModel):
+    data: UserConfig
 
 class ListProvidersResponse(BaseModel):
     data: List[ProviderInfo]
@@ -46,6 +51,12 @@ class ListRoutesResponse(BaseModel):
 
 @runtime_checkable
 class Inspect(Protocol):
+
+    @webmethod(route="/inspect/configurations", method="GET")
+    async def inspect_config(
+        self,
+    ) -> InspectConfigResponse: ...
+                  
     @webmethod(route="/inspect/providers", method="GET")
     async def list_providers(self) -> ListProvidersResponse: ...
 

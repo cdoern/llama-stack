@@ -7,6 +7,7 @@
 from typing import Annotated, Any, Dict, List, Optional, Union
 
 from pydantic import BaseModel, Field
+from llama_stack.distribution.utils.dynamic import instantiate_class_type
 
 from llama_stack.apis.benchmarks import Benchmark, BenchmarkInput
 from llama_stack.apis.datasetio import DatasetIO
@@ -116,7 +117,6 @@ class Provider(BaseModel):
     provider_type: str
     config: Dict[str, Any]
 
-
 class ServerConfig(BaseModel):
     port: int = Field(
         default=8321,
@@ -133,6 +133,34 @@ class ServerConfig(BaseModel):
         description="Path to TLS key file for HTTPS",
     )
 
+
+class UserConfig(BaseModel):
+    providers: Dict[str, List[Provider]] = Field(
+        description="""
+One or more providers to use for each API. The same provider_type (e.g., meta-reference)
+can be instantiated multiple times (with different configs) if necessary.
+""",
+    )
+    @classmethod
+    def from_stack_run(cls, registry: Dict[Any, Dict[str, Any]], stack_run: "StackRunConfig") -> "UserConfig":
+        user_config : Dict[str, List[Provider]] = {}
+        for type, providers in stack_run.providers.items():
+            api = Api(type)
+            user_config[type] = []
+            for provider in providers:
+                provider_config = {}
+                provider_spec = registry[api][provider.provider_type]
+                config_type = instantiate_class_type(provider_spec.config_class)
+                try:
+                    if provider.config:
+                        existing = config_type(**provider.config)
+                        for field_name, field in existing.model_fields.items():
+                                if field.json_schema_extra:
+                                    provider_config[field_name] = field.default
+                        user_config[type].append(Provider(provider_id=provider.provider_id, provider_type=provider.provider_type, config=provider_config))
+                except Exception as exc:
+                    print(f"Could not instantiate UserConfig due to improper provider config {exc}")           
+        return cls(providers=user_config)
 
 class StackRunConfig(BaseModel):
     version: str = LLAMA_STACK_RUN_CONFIG_VERSION

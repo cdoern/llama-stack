@@ -29,7 +29,7 @@ from pydantic import BaseModel, ValidationError
 from typing_extensions import Annotated
 
 from llama_stack import logcat
-from llama_stack.distribution.datatypes import StackRunConfig
+from llama_stack.distribution.datatypes import StackRunConfig, UserConfig
 from llama_stack.distribution.distribution import builtin_automatically_routed_apis
 from llama_stack.distribution.request_headers import set_request_provider_data
 from llama_stack.distribution.resolver import InvalidProviderError
@@ -377,6 +377,7 @@ def main():
     with open(config_file, "r") as fp:
         config = replace_env_vars(yaml.safe_load(fp))
         config = StackRunConfig(**config)
+        #user_config = UserConfig.from_stack_run(**config)
 
     logcat.info("server", "Run configuration:")
     safe_config = redact_sensitive_fields(config.model_dump())

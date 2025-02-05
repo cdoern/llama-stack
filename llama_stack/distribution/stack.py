@@ -13,6 +13,7 @@ import yaml
 from termcolor import colored
 
 from llama_stack import logcat
+from llama_stack.apis.config import Configurations
 from llama_stack.apis.agents import Agents
 from llama_stack.apis.batch_inference import BatchInference
 from llama_stack.apis.benchmarks import Benchmarks
@@ -41,6 +42,7 @@ from llama_stack.providers.datatypes import Api
 
 
 class LlamaStack(
+    Configurations,
     VectorDBs,
     Inference,
     BatchInference,
@@ -214,6 +216,7 @@ async def construct_stack(
     run_config: StackRunConfig, provider_registry: Optional[ProviderRegistry] = None
 ) -> Dict[Api, Any]:
     dist_registry, _ = await create_dist_registry(run_config.metadata_store, run_config.image_name)
+    # TODO: cdoern, this is probably a good spot to add a `get_registered_configs`
     impls = await resolve_impls(run_config, provider_registry or get_provider_registry(), dist_registry)
     await register_resources(run_config, impls)
     return impls

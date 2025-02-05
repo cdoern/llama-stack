@@ -32,6 +32,7 @@ from llama_stack.distribution.datatypes import (
     RoutingTableProviderSpec,
     StackRunConfig,
 )
+from llama_stack.apis.config import Configurations
 from llama_stack.distribution.distribution import builtin_automatically_routed_apis
 from llama_stack.distribution.store import DistributionRegistry
 from llama_stack.distribution.utils.dynamic import instantiate_class_type
@@ -57,6 +58,7 @@ class InvalidProviderError(Exception):
 
 def api_protocol_map() -> Dict[Api, Any]:
     return {
+        Api.configurations: Configurations,
         Api.agents: Agents,
         Api.inference: Inference,
         Api.inspect: Inspect,
@@ -245,6 +247,27 @@ def sort_providers_by_deps(
     )
 
     logcat.debug("core", f"Resolved {len(sorted_providers)} providers")
+    sorted_providers.append(
+        (
+            "configurations",
+            ProviderWithSpec(
+                provider_id="__builtin__",
+                provider_type="__builtin__",
+                config={
+                    "run_config": run_config.dict(),
+                },
+                spec=InlineProviderSpec(
+                    api=Api.configurations,
+                    provider_type="__builtin__",
+                    config_class="llama_stack.distribution.configure.Config",
+                    module="llama_stack.distribution.configure",
+                    api_dependencies=apis,
+                    deps__=([x.value for x in apis]),
+                ),
+            ),
+        )
+    )
+
     for api_str, provider in sorted_providers:
         logcat.debug("core", f" {api_str} => {provider.provider_id}")
     return sorted_providers

@@ -14,6 +14,7 @@ from llama_stack.apis.common.content_types import URL
 from llama_stack.apis.common.type_system import ParamType
 from llama_stack.apis.datasets import Dataset, Datasets, ListDatasetsResponse
 from llama_stack.apis.models import ListModelsResponse, Model, Models, ModelType
+from llama_stack.apis.config import ConfigListResponse, Configurartion, Configurations
 from llama_stack.apis.resource import ResourceType
 from llama_stack.apis.scoring_functions import (
     ListScoringFunctionsResponse,
@@ -205,6 +206,46 @@ class CommonRoutingTableImpl(RoutingTable):
     async def get_all_with_type(self, type: str) -> List[RoutableObjectWithProvider]:
         objs = await self.dist_registry.get_all()
         return [obj for obj in objs if obj.type == type]
+    
+
+# class ConfigurationsRoutingTable(CommonRoutingTableImpl, Configurations):
+#     async def list_configs(self) -> ConfigListResponse:
+#         return ConfigListResponse(data=await self.get_all_with_type(ResourceType.configuration.value))
+    
+#     async def get_model(self, config_id: str) -> Optional[Configurartion]:
+#         return await self.get_object_by_identifier("configuration", config_id)
+
+#     async def register_config(
+#         self,
+#         config_id: str,
+#         provider_id: Optional[str] = None,
+#         metadata: Optional[Dict[str, Any]] = None,
+#     ) -> Configurartion:
+#         if provider_id is None:
+#             # If provider_id not specified, use the only provider if it supports this model
+#             if len(self.impls_by_provider_id) == 1:
+#                 provider_id = list(self.impls_by_provider_id.keys())[0]
+#             else:
+#                 raise ValueError(
+#                     f"No provider specified and multiple providers available. Please specify a provider_id. Available providers: {self.impls_by_provider_id.keys()}"
+#                 )
+#         if metadata is None:
+#             metadata = {}
+#         config = Configurartion(
+#             identifier=config_id,
+#             provider_resource_id=config_id,
+#             provider_id=provider_id,
+#             metadata=metadata,
+#         )
+#         registered_model = await self.register_object(model)
+#         return registered_model
+
+#     async def unregister_model(self, model_id: str) -> None:
+#         existing_model = await self.get_model(model_id)
+#         if existing_model is None:
+#             raise ValueError(f"Model {model_id} not found")
+#         await self.unregister_object(existing_model)
+
 
 
 class ModelsRoutingTable(CommonRoutingTableImpl, Models):

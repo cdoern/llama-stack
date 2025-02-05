@@ -16,8 +16,13 @@ from llama_stack.apis.inspect import (
     ProviderInfo,
     RouteInfo,
     VersionInfo,
+    InspectConfigResponse,
 )
-from llama_stack.distribution.datatypes import StackRunConfig
+
+from llama_stack.distribution.distribution import (
+    get_provider_registry,
+)
+from llama_stack.distribution.datatypes import StackRunConfig, UserConfig
 from llama_stack.distribution.server.endpoints import get_all_api_endpoints
 
 
@@ -38,6 +43,13 @@ class DistributionInspectImpl(Inspect):
 
     async def initialize(self) -> None:
         pass
+
+    async def inspect_config(self) -> InspectConfigResponse:
+        # get current cfg, return it.
+        run_config = self.config.run_config
+        provider_registry = get_provider_registry()
+        user_config = UserConfig.from_stack_run(registry=provider_registry, stack_run=run_config)
+        return InspectConfigResponse(data=user_config)
 
     async def list_providers(self) -> ListProvidersResponse:
         run_config = self.config.run_config

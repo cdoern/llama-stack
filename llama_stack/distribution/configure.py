@@ -5,13 +5,27 @@
 # the root directory of this source tree.
 import logging
 import textwrap
+
+from pydantic import BaseModel
 from typing import Any, Dict
+
+from llama_stack.apis.config import (
+    Configurations,
+    ConfigListResponse,
+    Configurartion,
+)
+
+from llama_stack.apis.inspect import (
+    InspectConfigResponse
+)
+
 
 from llama_stack.distribution.datatypes import (
     LLAMA_STACK_RUN_CONFIG_VERSION,
     DistributionSpec,
     Provider,
     StackRunConfig,
+    UserConfig
 )
 from llama_stack.distribution.distribution import (
     builtin_automatically_routed_apis,
@@ -22,6 +36,45 @@ from llama_stack.distribution.utils.prompt_for_config import prompt_for_config
 from llama_stack.providers.datatypes import Api, ProviderSpec
 
 logger = logging.getLogger(__name__)
+
+
+
+class Config(BaseModel):
+    run_config: StackRunConfig
+
+
+async def get_provider_impl(config, deps):
+    impl = ConfigImpl(config, deps)
+    await impl.initialize()
+    return impl
+
+# is this technically "server side"
+# but if the config files are going to live here, that means they are "server side"
+# distributions are server side so shouldn't config for distributions be server side?
+class ConfigImpl(Configurations):
+    def __init__(self, config, deps):
+        self.config = config
+        self.deps = deps
+
+    async def register_config(self, config_id, provider_config_id, provider_id):
+        # get current user config from stack config
+        # see if there are any registered configs
+        # apply those on top
+        # see if this one collides, if so err, if not apply
+        run_config = self.config.run_config
+        provider_registry = get_provider_registry()
+        user_config = UserConfig.from_stack_run(registry=provider_registry, stack_run=run_config)
+
+        
+
+    async def initialize(self) -> None:
+        pass
+
+    async def list_configs(self) -> ConfigListResponse:
+        pass
+
+    async def get_config(self, config_id) -> Configurartion:
+        pass
 
 
 def configure_single_provider(registry: Dict[str, ProviderSpec], provider: Provider) -> Provider:

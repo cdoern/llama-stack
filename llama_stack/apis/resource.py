@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field
 
 
 class ResourceType(Enum):
+    configuration = "configuration"
     model = "model"
     shield = "shield"
     vector_db = "vector_db"
