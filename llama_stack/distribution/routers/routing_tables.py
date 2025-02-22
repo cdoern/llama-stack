@@ -14,7 +14,7 @@ from llama_stack.apis.common.content_types import URL
 from llama_stack.apis.common.type_system import ParamType
 from llama_stack.apis.datasets import Dataset, Datasets, ListDatasetsResponse
 from llama_stack.apis.models import ListModelsResponse, Model, Models, ModelType
-from llama_stack.apis.config import ConfigListResponse, Configurartion, Configurations
+from llama_stack.apis.config import ConfigListResponse, Configuration, Configurations
 from llama_stack.apis.resource import ResourceType
 from llama_stack.apis.scoring_functions import (
     ListScoringFunctionsResponse,
@@ -31,12 +31,23 @@ from llama_stack.apis.tools import (
     ToolGroups,
     ToolHost,
 )
+from llama_stack.distribution.distribution import (
+    builtin_automatically_routed_apis,
+    get_provider_registry,
+)
 from llama_stack.apis.vector_dbs import ListVectorDBsResponse, VectorDB, VectorDBs
 from llama_stack.distribution.datatypes import (
+    UserConfig,
+    Provider,
+    StackRunConfig,
+)
+
+from llama_stack.distribution.route_types import (
     RoutableObject,
     RoutableObjectWithProvider,
     RoutedProtocol,
 )
+import copy
 from llama_stack.distribution.store import DistributionRegistry
 from llama_stack.providers.datatypes import Api, RoutingTable
 
@@ -52,7 +63,6 @@ async def register_object_with_provider(obj: RoutableObject, p: Any) -> Routable
     api = get_impl_api(p)
 
     assert obj.provider_id != "remote", "Remote provider should not be registered"
-
     if api == Api.inference:
         return await p.register_model(obj)
     elif api == Api.safety:
@@ -206,45 +216,6 @@ class CommonRoutingTableImpl(RoutingTable):
     async def get_all_with_type(self, type: str) -> List[RoutableObjectWithProvider]:
         objs = await self.dist_registry.get_all()
         return [obj for obj in objs if obj.type == type]
-    
-
-# class ConfigurationsRoutingTable(CommonRoutingTableImpl, Configurations):
-#     async def list_configs(self) -> ConfigListResponse:
-#         return ConfigListResponse(data=await self.get_all_with_type(ResourceType.configuration.value))
-    
-#     async def get_model(self, config_id: str) -> Optional[Configurartion]:
-#         return await self.get_object_by_identifier("configuration", config_id)
-
-#     async def register_config(
-#         self,
-#         config_id: str,
-#         provider_id: Optional[str] = None,
-#         metadata: Optional[Dict[str, Any]] = None,
-#     ) -> Configurartion:
-#         if provider_id is None:
-#             # If provider_id not specified, use the only provider if it supports this model
-#             if len(self.impls_by_provider_id) == 1:
-#                 provider_id = list(self.impls_by_provider_id.keys())[0]
-#             else:
-#                 raise ValueError(
-#                     f"No provider specified and multiple providers available. Please specify a provider_id. Available providers: {self.impls_by_provider_id.keys()}"
-#                 )
-#         if metadata is None:
-#             metadata = {}
-#         config = Configurartion(
-#             identifier=config_id,
-#             provider_resource_id=config_id,
-#             provider_id=provider_id,
-#             metadata=metadata,
-#         )
-#         registered_model = await self.register_object(model)
-#         return registered_model
-
-#     async def unregister_model(self, model_id: str) -> None:
-#         existing_model = await self.get_model(model_id)
-#         if existing_model is None:
-#             raise ValueError(f"Model {model_id} not found")
-#         await self.unregister_object(existing_model)
 
 
 
@@ -502,6 +473,35 @@ class BenchmarksRoutingTable(CommonRoutingTableImpl, Benchmarks):
             provider_resource_id=provider_benchmark_id,
         )
         await self.register_object(benchmark)
+
+    async def DEPRECATED_list_eval_tasks(self) -> ListBenchmarksResponse:
+        logger.warning("DEPRECATED: Use /eval/benchmarks instead")
+        return await self.list_benchmarks()
+
+    async def DEPRECATED_get_eval_task(
+        self,
+        eval_task_id: str,
+    ) -> Optional[Benchmark]:
+        logger.warning("DEPRECATED: Use /eval/benchmarks instead")
+        return await self.get_benchmark(eval_task_id)
+
+    async def DEPRECATED_register_eval_task(
+        self,
+        eval_task_id: str,
+        dataset_id: str,
+        scoring_functions: List[str],
+        provider_benchmark_id: Optional[str] = None,
+        provider_id: Optional[str] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        logger.warning("DEPRECATED: Use /eval/benchmarks instead")
+        return await self.register_benchmark(
+            benchmark_id=eval_task_id,
+            dataset_id=dataset_id,
+            scoring_functions=scoring_functions,
+            metadata=metadata,
+            provider_benchmark_id=provider_benchmark_id,
+        )
 
 
 class ToolGroupsRoutingTable(CommonRoutingTableImpl, ToolGroups):

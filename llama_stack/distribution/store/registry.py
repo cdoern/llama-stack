@@ -10,7 +10,7 @@ from typing import Dict, List, Optional, Protocol, Tuple
 
 import pydantic
 
-from llama_stack.distribution.datatypes import KVStoreConfig, RoutableObjectWithProvider
+from llama_stack.distribution.route_types import KVStoreConfig, RoutableObjectWithProvider
 from llama_stack.distribution.utils.config_dirs import DISTRIBS_BASE_DIR
 from llama_stack.providers.utils.kvstore import KVStore, kvstore_impl
 from llama_stack.providers.utils.kvstore.config import SqliteKVStoreConfig

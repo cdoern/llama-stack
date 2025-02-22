@@ -6,12 +6,14 @@
 
 from typing import Any, Dict
 
-from llama_stack.distribution.datatypes import RoutedProtocol
+from llama_stack.distribution.route_types import RoutedProtocol
 from llama_stack.distribution.store import DistributionRegistry
 from llama_stack.providers.datatypes import Api, RoutingTable
+from llama_stack.distribution.datatypes import StackRunConfig
 
 from .routing_tables import (
     BenchmarksRoutingTable,
+  #  ConfigurationsRoutingTable,
     DatasetsRoutingTable,
     ModelsRoutingTable,
     ScoringFunctionsRoutingTable,
@@ -24,10 +26,12 @@ from .routing_tables import (
 async def get_routing_table_impl(
     api: Api,
     impls_by_provider_id: Dict[str, RoutedProtocol],
+ #   config: StackRunConfig,
     _deps,
     dist_registry: DistributionRegistry,
 ) -> Any:
     api_to_tables = {
+  #      "configurations": ConfigurationsRoutingTable,
         "vector_dbs": VectorDBsRoutingTable,
         "models": ModelsRoutingTable,
         "shields": ShieldsRoutingTable,
@@ -47,6 +51,7 @@ async def get_routing_table_impl(
 
 async def get_auto_router_impl(api: Api, routing_table: RoutingTable, _deps) -> Any:
     from .routers import (
+       # ConfigurationRouter,
         DatasetIORouter,
         EvalRouter,
         InferenceRouter,
@@ -57,6 +62,7 @@ async def get_auto_router_impl(api: Api, routing_table: RoutingTable, _deps) -> 
     )
 
     api_to_routers = {
+  #      "configuration": ConfigurationRouter,
         "vector_io": VectorIORouter,
         "inference": InferenceRouter,
         "safety": SafetyRouter,
@@ -69,5 +75,6 @@ async def get_auto_router_impl(api: Api, routing_table: RoutingTable, _deps) -> 
         raise ValueError(f"API {api.value} not found in router map")
 
     impl = api_to_routers[api.value](routing_table)
+#    print(impl)
     await impl.initialize()
     return impl

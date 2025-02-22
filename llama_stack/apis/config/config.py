@@ -10,16 +10,17 @@ from typing import (
     runtime_checkable,
     Union,
 )
+from llama_stack.distribution.datatypes import StackRunConfig
 from llama_stack.apis.resource import Resource, ResourceType
 
-from llama_models.schema_utils import json_schema_type, register_schema, webmethod
+from llama_stack.schema_utils import json_schema_type, register_schema, webmethod
 from llama_stack.providers.utils.telemetry.trace_protocol import trace_protocol
 
 
 @json_schema_type
-class Configurartion(BaseModel):
+class Configuration(BaseModel):
     type: Literal[ResourceType.configuration.value] = ResourceType.configuration.value
-    data: dict[str, Any]
+    config: StackRunConfig
 
 class ConfigListResponse(BaseModel):
     data: List[dict[str, Any]]
@@ -40,12 +41,10 @@ class Configurations(Protocol):
     async def get_config(
         self,
         config_id,
-    ) -> Optional[Configurartion]: ...
+    ) -> Optional[Configuration]: ...
 
-    @webmethod(route="/configurations", method="POST")
+    @webmethod(route="/configurations/register", method="POST")
     async def register_config(
         self,
-        config_id,
-        provider_config_id,
-        provider_id,
+        config,
     ) -> dict[str, Any]: ...

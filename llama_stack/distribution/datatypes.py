@@ -4,7 +4,7 @@
 # This source code is licensed under the terms described in the LICENSE file in
 # the root directory of this source tree.
 
-from typing import Annotated, Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 
 from pydantic import BaseModel, Field
 from llama_stack.distribution.utils.dynamic import instantiate_class_type
@@ -29,44 +29,7 @@ LLAMA_STACK_BUILD_CONFIG_VERSION = "2"
 LLAMA_STACK_RUN_CONFIG_VERSION = "2"
 
 
-RoutingKey = Union[str, List[str]]
 
-
-RoutableObject = Union[
-    Model,
-    Shield,
-    VectorDB,
-    Dataset,
-    ScoringFn,
-    Benchmark,
-    Tool,
-    ToolGroup,
-]
-
-
-RoutableObjectWithProvider = Annotated[
-    Union[
-        Model,
-        Shield,
-        VectorDB,
-        Dataset,
-        ScoringFn,
-        Benchmark,
-        Tool,
-        ToolGroup,
-    ],
-    Field(discriminator="type"),
-]
-
-RoutedProtocol = Union[
-    Inference,
-    Safety,
-    VectorIO,
-    DatasetIO,
-    Scoring,
-    Eval,
-    ToolRuntime,
-]
 
 
 # Example: /inference, /safety
@@ -143,6 +106,9 @@ can be instantiated multiple times (with different configs) if necessary.
     )
     @classmethod
     def from_stack_run(cls, registry: Dict[Any, Dict[str, Any]], stack_run: "StackRunConfig") -> "UserConfig":
+        """
+        This is almost a method to go backwards and get a user config from an existing run config
+        """
         user_config : Dict[str, List[Provider]] = {}
         for type, providers in stack_run.providers.items():
             api = Api(type)
@@ -158,6 +124,33 @@ can be instantiated multiple times (with different configs) if necessary.
                                 if field.json_schema_extra:
                                     provider_config[field_name] = field.default
                         user_config[type].append(Provider(provider_id=provider.provider_id, provider_type=provider.provider_type, config=provider_config))
+                except Exception as exc:
+                    print(f"Could not instantiate UserConfig due to improper provider config {exc}")           
+        return cls(providers=user_config)
+    
+    @classmethod
+    def from_providers(cls, registry: Dict[Any, Dict[str, Any]], providers: Dict[str, List[Provider]]):
+        """
+        This is a method to go forward, validate that a dictionary of providers is _only_ a user config
+        """
+        user_config : Dict[str, List[Provider]] = {}
+        for type, provider_list in providers.items():
+            api = Api(type)
+            user_config[type] = []
+            provider_config = {}
+            for prov in provider_list:
+                prov = Provider(**prov)
+                provider_spec = registry[api][prov.provider_type]
+                config_type = instantiate_class_type(provider_spec.config_class)
+                try:
+                    if prov.config is not None:
+                        existing = config_type(**prov.config)
+                        for field_name, field in existing.model_fields.items():
+                                if field.json_schema_extra:
+                                    provider_config[field_name] =  getattr(existing, field_name)
+                                else:
+                                    print("given configuration is not user configurable.")
+                        user_config[type].append(Provider(provider_id=prov.provider_id, provider_type=prov.provider_type, config=provider_config))
                 except Exception as exc:
                     print(f"Could not instantiate UserConfig due to improper provider config {exc}")           
         return cls(providers=user_config)

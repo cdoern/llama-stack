@@ -119,6 +119,8 @@ def build_image(
             str(image_name),
             " ".join(normal_deps),
         ]
+    
+    print(args)
 
     if special_deps:
         args.append("#".join(special_deps))

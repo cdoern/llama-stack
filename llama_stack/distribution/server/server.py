@@ -312,6 +312,40 @@ class ClientVersionMiddleware:
         return await self.app(scope, receive, send)
 
 
+def register_endpoint(app, api, endpoint, impl):
+    """Registers an endpoint dynamically, with special handling for config updates."""
+    impl_method = getattr(impl, endpoint.name)
+
+    async def dynamic_handler(*args, **kwargs):
+        return await impl_method(*args, **kwargs)
+
+    route = endpoint.route
+    method = endpoint.method
+
+    if route == "/configurations/register":
+        async def reconfigure_handler(request: Request):
+            print("HIIII")
+            from llama_stack.apis.config import Configuration
+            """Handles config updates dynamically."""
+            response_json = await request.json()
+
+            configuration = Configuration.model_validate_json(response_json)
+
+            # Rebuild stack
+            new_impls = await construct_stack(run_config=configuration.config)
+
+            # Store new impls globally
+            app.__llama_stack_impls__ = new_impls
+
+            return {"message": "Configuration updated successfully"}
+
+        getattr(app, method)(route)(reconfigure_handler)
+    else:
+        getattr(app, method)(route, response_model=None)(
+            create_dynamic_typed_route(dynamic_handler, method, route)
+        )
+
+
 def main():
     logcat.init()
 
@@ -413,6 +447,8 @@ def main():
             continue
         apis_to_serve.add(inf.routing_table_api.value)
 
+
+
     apis_to_serve.add("inspect")
     for api_str in apis_to_serve:
         api = Api(api_str)
@@ -421,21 +457,13 @@ def main():
         impl = impls[api]
 
         for endpoint in endpoints:
-            if not hasattr(impl, endpoint.name):
-                # ideally this should be a typing violation already
-                raise ValueError(f"Could not find method {endpoint.name} on {impl}!!")
 
-            impl_method = getattr(impl, endpoint.name)
+            if not hasattr(impl, endpoint.name):
+                raise ValueError(f"Could not find method {endpoint.name} on {impl}!!")
 
             with warnings.catch_warnings():
                 warnings.filterwarnings("ignore", category=UserWarning, module="pydantic._internal._fields")
-                getattr(app, endpoint.method)(endpoint.route, response_model=None)(
-                    create_dynamic_typed_route(
-                        impl_method,
-                        endpoint.method,
-                        endpoint.route,
-                    )
-                )
+                register_endpoint(app, api, endpoint, impl)
 
     logcat.debug("server", f"serving APIs: {apis_to_serve}")
 

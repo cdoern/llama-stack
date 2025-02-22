@@ -238,6 +238,7 @@ class AsyncLlamaStackAsLibraryClient(AsyncLlamaStackClient):
 
             return f"^{pattern}$"
 
+        print("hmm", self.impls)
         for api, api_endpoints in endpoints.items():
             if api not in self.impls:
                 continue
@@ -249,6 +250,7 @@ class AsyncLlamaStackAsLibraryClient(AsyncLlamaStackClient):
                 endpoint_impls[endpoint.method][_convert_path_to_regex(endpoint.route)] = func
 
         self.endpoint_impls = endpoint_impls
+        print("ENDPOINT", self.endpoint_impls)
         return True
 
     async def request(
@@ -295,7 +297,9 @@ class AsyncLlamaStackAsLibraryClient(AsyncLlamaStackClient):
         if not impls:
             raise ValueError(f"No endpoint found for {path}")
 
+        print(impls)
         for regex, func in impls.items():
+            print("????", regex, func, path)
             match = re.match(regex, path)
             if match:
                 # Extract named groups from the regex match

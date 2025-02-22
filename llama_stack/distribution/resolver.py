@@ -248,25 +248,25 @@ def sort_providers_by_deps(
 
     logcat.debug("core", f"Resolved {len(sorted_providers)} providers")
     sorted_providers.append(
-        (
-            "configurations",
-            ProviderWithSpec(
-                provider_id="__builtin__",
-                provider_type="__builtin__",
-                config={
-                    "run_config": run_config.dict(),
-                },
-                spec=InlineProviderSpec(
-                    api=Api.configurations,
-                    provider_type="__builtin__",
-                    config_class="llama_stack.distribution.configure.Config",
-                    module="llama_stack.distribution.configure",
-                    api_dependencies=apis,
-                    deps__=([x.value for x in apis]),
-                ),
-            ),
-        )
-    )
+         (
+             "configurations",
+             ProviderWithSpec(
+                 provider_id="__builtin__",
+                 provider_type="__builtin__",
+                 config={
+                     "run_config": run_config.dict(),
+                 },
+                 spec=InlineProviderSpec(
+                     api=Api.configurations,
+                     provider_type="__builtin__",
+                     config_class="llama_stack.distribution.configure.Config",
+                     module="llama_stack.distribution.configure",
+                     api_dependencies=apis,
+                     deps__=([x.value for x in apis]),
+                 ),
+             ),
+         )
+     )
 
     for api_str, provider in sorted_providers:
         logcat.debug("core", f" {api_str} => {provider.provider_id}")

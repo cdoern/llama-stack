@@ -51,9 +51,26 @@ from llama_stack.apis.tools import (
     ToolDef,
     ToolRuntime,
 )
+from llama_stack.apis.config import Configuration
 from llama_stack.apis.vector_io import Chunk, QueryChunksResponse, VectorIO
 from llama_stack.providers.datatypes import RoutingTable
 
+
+# class ConfigurationRouter(Configuration):
+#     def __init__(
+#         self,
+#         routing_table: RoutingTable,
+#     ) -> None:
+#         self.config = config
+#         self.routing_table = routing_table
+
+    
+#     async def register_config(self, config) -> None:
+#         await self.routing_table.register_config(
+#             self.config.run_config,
+#             config,
+#             provider_id,
+#         )
 
 class VectorIORouter(VectorIO):
     """Routes to an provider based on the vector db identifier"""

@@ -34,10 +34,12 @@ from llama_stack.apis.inference import (
     ToolDefinition,
     ToolPromptFormat,
 )
+from llama_stack.apis.config import Configuration
 from llama_stack.apis.models import Model, ModelType
+from llama_stack.models.llama.datatypes import CoreModelId
 from llama_stack.providers.datatypes import ModelsProtocolPrivate
 from llama_stack.providers.utils.inference.model_registry import (
-    ModelRegistryHelper,
+    ModelRegistryHelper
 )
 from llama_stack.providers.utils.inference.openai_compat import (
     OpenAICompatCompletionChoice,
@@ -282,6 +284,11 @@ class OllamaInferenceAdapter(Inference, ModelsProtocolPrivate):
         embeddings = response["embeddings"]
 
         return EmbeddingsResponse(embeddings=embeddings)
+
+    async def register_config(self, config) -> Configuration:
+        self.url = config.url
+        # either this or just call __init__ again or something
+        # the issue w/ doing it this way is that we need to explicitly set config entries.
 
     async def register_model(self, model: Model) -> Model:
         model = await self.register_helper.register_model(model)
