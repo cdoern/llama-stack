@@ -15,6 +15,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Optional, TypeVar, Union, get_args, get_origin
 
+from ..distribution.datatypes import StackRunConfig
 import httpx
 import yaml
 from llama_stack_client import (
@@ -24,6 +25,9 @@ from llama_stack_client import (
     AsyncLlamaStackClient,
     AsyncStream,
     LlamaStackClient,
+)
+from llama_stack_client.types import (
+    configuration_register_response
 )
 from pydantic import BaseModel, TypeAdapter
 from rich.console import Console
@@ -238,7 +242,6 @@ class AsyncLlamaStackAsLibraryClient(AsyncLlamaStackClient):
 
             return f"^{pattern}$"
 
-        print("hmm", self.impls)
         for api, api_endpoints in endpoints.items():
             if api not in self.impls:
                 continue
@@ -250,7 +253,6 @@ class AsyncLlamaStackAsLibraryClient(AsyncLlamaStackClient):
                 endpoint_impls[endpoint.method][_convert_path_to_regex(endpoint.route)] = func
 
         self.endpoint_impls = endpoint_impls
-        print("ENDPOINT", self.endpoint_impls)
         return True
 
     async def request(
@@ -278,6 +280,13 @@ class AsyncLlamaStackAsLibraryClient(AsyncLlamaStackClient):
                 cast_to=cast_to,
                 options=options,
             )
+        # Check if response is of a certain type
+        if isinstance(response, configuration_register_response.ConfigurationRegisterResponse) and hasattr(response, "config"):
+            # Cast config to a specific class
+            cfg = StackRunConfig(**response.config)
+            self.config = cfg
+            await self.initialize()
+
         return response
 
     def _find_matching_endpoint(self, method: str, path: str) -> tuple[Any, dict]:
@@ -297,9 +306,7 @@ class AsyncLlamaStackAsLibraryClient(AsyncLlamaStackClient):
         if not impls:
             raise ValueError(f"No endpoint found for {path}")
 
-        print(impls)
         for regex, func in impls.items():
-            print("????", regex, func, path)
             match = re.match(regex, path)
             if match:
                 # Extract named groups from the regex match

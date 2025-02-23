@@ -122,7 +122,7 @@ can be instantiated multiple times (with different configs) if necessary.
                         existing = config_type(**provider.config)
                         for field_name, field in existing.model_fields.items():
                                 if field.json_schema_extra:
-                                    provider_config[field_name] = field.default
+                                    provider_config[field_name] =  getattr(existing, field_name)
                         user_config[type].append(Provider(provider_id=provider.provider_id, provider_type=provider.provider_type, config=provider_config))
                 except Exception as exc:
                     print(f"Could not instantiate UserConfig due to improper provider config {exc}")           

@@ -324,7 +324,6 @@ def register_endpoint(app, api, endpoint, impl):
 
     if route == "/configurations/register":
         async def reconfigure_handler(request: Request):
-            print("HIIII")
             from llama_stack.apis.config import Configuration
             """Handles config updates dynamically."""
             response_json = await request.json()
