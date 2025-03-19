@@ -8,6 +8,8 @@ from typing import Callable
 import datasets
 import transformers
 from termcolor import cprint
+from ...common.utils import SystemInformation
+from ..config import MINIMUM_VRAM_REQUIREMENT
 from transformers.configuration_utils import PretrainedConfig
 from transformers.tokenization_utils import PreTrainedTokenizer
 from transformers.tokenization_utils_fast import PreTrainedTokenizerFast
@@ -20,6 +22,7 @@ from llama_stack.apis.post_training.post_training import AlgorithmConfig, Traini
 STORAGE_SUBDIRS = ["checkpoints", "data", "logs", "hf_cache"]
 VALIDATED_MODEL_ARCHS = ["LlamaForCausalLM", "GraniteForCausalLM"]
 TMP_DATA_FILE_NAME = "data.jsonl"
+
 
 SomePretrainedTokenizer: typing.TypeAlias = PreTrainedTokenizer | PreTrainedTokenizerFast
 
@@ -185,6 +188,20 @@ class FullPrecisionFineTuning:
             RuntimeError: If tokenizer doesn't have chat template available.
             OSError: Can be raised via this function if config or tokenizer not available via model's name.
         """
+
+        # ... or. GPUs are registerable resources like models, files, etc, are.
+        # we could let this happen and if a user registers resources that do not exist, fail on usage.
+        system_info = SystemInformation()
+        if not system_info.gpu_information:
+            raise ValueError(f"Error from InstructLab Training layer: Insufficient GPU Memory on System")
+        total_gpu_memory = 0
+        utilized_gpu_memory = 0
+        for gpu in system_info.gpu_information:
+            total_gpu_memory += gpu.total_memory
+            utilized_gpu_memory += gpu.used_memory
+        if total_gpu_memory-utilized_gpu_memory > MINIMUM_VRAM_REQUIREMENT:
+            raise ValueError(f"Error from InstructLab Training layer: Insufficient GPU Memory Remaining on System")
+
         model_config = self.__try_load_config()
         cprint("Loaded model config", color="cyan")
         if not self.check_model_arch_validated(model_config=model_config):

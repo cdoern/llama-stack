@@ -8,6 +8,11 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Optional
 
+from ..common.utils import SystemInformation
+
+import subprocess
+from llama_stack.log import get_logger
+
 import fastapi
 import fastapi.concurrency
 import pydantic
@@ -26,9 +31,11 @@ from llama_stack.apis.post_training import (
     PostTrainingJobStatusResponse,
     TrainingConfig,
 )
-from llama_stack.providers.inline.post_training.huggingface_ilab.config import HFilabPostTrainingConfig
+from llama_stack.providers.inline.post_training.huggingface_ilab.config import HFilabPostTrainingConfig, MINIMUM_VRAM_REQUIREMENT, GPU_MAXIMUM_POWER_DRAW, GPU_MAXIMUM_UTILIZATION
 from llama_stack.providers.inline.post_training.huggingface_ilab.recipes import FullPrecisionFineTuning
 from llama_stack.schema_utils import webmethod
+
+logger = get_logger(name=__name__)
 
 
 class TuningJob(pydantic.BaseModel):
@@ -40,7 +47,7 @@ class TuningJob(pydantic.BaseModel):
     scheduled_at: datetime | None = None
     completed_at: datetime | None = None
 
-    subproc_ref: subprocess.Process | None = None
+    subproc_ref: subprocess.Popen | None = None
 
 
 class HFilabPostTrainingImpl:
@@ -53,6 +60,26 @@ class HFilabPostTrainingImpl:
         self.config = config
         self.datasetio_api = datasetio_api
         self.datasets_api = datasets
+
+        # so this is either the solution, 
+        # OR: a higher level 'GPU Mutex' which associates which GPU is being used by which inline provider.
+        # is this expandable to remote providers, only if they have GPU accessible information
+
+        # ... or. GPUs are registerable resources like models, files, etc, are.
+        # we could let this happen and if a user registers resources that do not exist, fail on usage.
+        system_info = SystemInformation()
+        total_gpu_memory = 0
+        utilized_gpu_memory = 0
+        if not system_info.gpu_information:
+            raise ValueError(f"Error from InstructLab Training layer: Insufficient GPU Memory on System")
+        for i, gpu in enumerate(system_info.gpu_information):
+            logger.info(f"GPU{i} INFO: {gpu}")
+            if gpu.power_draw > GPU_MAXIMUM_POWER_DRAW or gpu.utilization > GPU_MAXIMUM_UTILIZATION:
+                raise ValueError(f"Error from InstructLab Training layer: GPU{i} is in use. Please free up the GPUs and try again")    
+            total_gpu_memory += gpu.total_memory
+            utilized_gpu_memory += gpu.used_memory
+        if total_gpu_memory-utilized_gpu_memory > MINIMUM_VRAM_REQUIREMENT:
+            raise ValueError(f"Error from InstructLab Training layer: Insufficient GPU Memory Remaining on System")
 
         self.current_job: TuningJob | None = None
 
@@ -75,7 +102,7 @@ class HFilabPostTrainingImpl:
         if self.current_job is not None:
             self.current_job.status.append(new_status)
 
-    def __set_subproc_ref_callback(self, subproc_ref: subprocess.Process):
+    def __set_subproc_ref_callback(self, subproc_ref: subprocess.Popen):
         if self.current_job is not None:
             self.current_job.subproc_ref = subproc_ref
 
