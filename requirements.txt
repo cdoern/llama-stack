@@ -55,3 +55,6 @@ typing-extensions==4.12.2
 tzdata==2025.1
 urllib3==2.3.0
 wcwidth==0.2.13
+kfp==2.12.1
+instructlab-training==0.7.0
+kubernetes==30.1.0

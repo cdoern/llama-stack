@@ -67,6 +67,12 @@ class TrainingConfig(BaseModel):
     optimizer_config: OptimizerConfig
     efficiency_config: Optional[EfficiencyConfig] = None
     dtype: Optional[str] = "bf16"
+    max_seq_len: Optional[int] = 4096
+    max_batch_len: Optional[int] = 20000
+    nnodes: int = 2
+    learning_rate: float = 1e-4
+    effective_batch_size: int = 3840
+
 
 
 @json_schema_type
@@ -170,6 +176,12 @@ class PostTrainingJobArtifactsResponse(BaseModel):
 
 
 class PostTraining(Protocol):
+    # @webmethod(route="/post-training/orchestrated-fine-tune", method="POST")
+    # async def orchestrated_fine_tune(
+    #     self,
+    #     job_uuid: str,
+    #     pipeline: kfp.
+    # )
     @webmethod(route="/post-training/supervised-fine-tune", method="POST")
     async def supervised_fine_tune(
         self,
