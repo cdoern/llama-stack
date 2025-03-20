@@ -6,7 +6,7 @@
 
 
 from pydantic import BaseModel
-
+from typing import Dict, Any
 from llama_stack.apis.providers import ListProvidersResponse, ProviderInfo, Providers
 from llama_stack.log import get_logger
 
@@ -64,3 +64,9 @@ class ProviderImpl(Providers):
                 return p
 
         raise ValueError(f"Provider {provider_id} not found")
+    
+    async def update_provider(self, provider_id: str, provider_config: Dict[str, Any]):
+        all_providers = await self.list_providers()
+        for p in all_providers.data:
+            if p.provider_id == provider_id:
+                return p
