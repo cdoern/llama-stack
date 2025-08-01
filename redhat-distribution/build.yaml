@@ -3,30 +3,31 @@ distribution_spec:
   description: Red Hat distribution of Llama Stack
   providers:
     inference:
-    - remote::vllm
-    - inline::sentence-transformers
+    - provider_type: remote::vllm
     vector_io:
-    - inline::milvus
+    - provider_type: inline::milvus
     safety:
-    - remote::trustyai_fms
+    - provider_type: remote::trustyai_fms
+      module: llama_stack_provider_trustyai_fms==0.1.7
     agents:
-    - inline::meta-reference
+    - provider_type: inline::meta-reference
     eval:
-    - remote::trustyai_lmeval
+    - provider_type: remote::trustyai_lmeval
+      module: llama_stack_provider_lmeval
     datasetio:
-    - remote::huggingface
-    - inline::localfs
+    - provider_type: remote::huggingface
+    - provider_type: inline::localfs
     scoring:
-    - inline::basic
-    - inline::llm-as-judge
-    - inline::braintrust
+    - provider_type: inline::basic
+    - provider_type: inline::llm-as-judge
+    - provider_type: inline::braintrust
     telemetry:
-    - inline::meta-reference
+    - provider_type: inline::meta-reference
     tool_runtime:
-    - remote::brave-search
-    - remote::tavily-search
-    - inline::rag-runtime
-    - remote::model-context-protocol
+    - provider_type: remote::brave-search
+    - provider_type: remote::tavily-search
+    - provider_type: inline::rag-runtime
+    - provider_type: remote::model-context-protocol
   container_image: registry.redhat.io/ubi9/python-311:9.6-1749631027
 additional_pip_packages:
 - aiosqlite
