@@ -1,0 +1,21 @@
+name: "OpenAPI Diff Action"
+description: "A minimal action to run the openapi-diff container and fail on incompatible changes."
+
+inputs:
+  old-spec:
+    description: "Old specification filename"
+    required: true
+  new-spec:
+    description: "New specification filename"
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: "Run openapi-diff tool and fail on incompatible changes"
+      run: |
+        docker run -v "$(pwd):/specs" --rm openapitools/openapi-diff:2.0.1 \
+          /specs/${{ inputs.old-spec }} \
+          /specs/${{ inputs.new-spec }} \
+          --fail-on-incompatible
+      shell: bash
