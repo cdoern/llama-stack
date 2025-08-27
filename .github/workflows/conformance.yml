@@ -42,36 +42,43 @@ jobs:
           ref: ${{ github.event.pull_request.base.ref }}
           path: 'base'
 
-      # does this include yq?
-      - name: Install dependencies
-        uses: ./.github/actions/setup-runner
-
       # Install the correct, modern yq tool to handle spec, yq we have by default cannot.
       - name: Install modern yq
-        uses: mikefarah/yq@f15500b20a1c991c8729870ba60a4dc3524b6a94 # v4.44.2
-        with:
-          version: v4.44.2
+        run: |
+          wget -qO $HOME/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          chmod +x $HOME/yq
+          echo "$HOME" >> $GITHUB_PATH
 
-      - name: Filter Schemas and Run Diff
+      - name: Run OpenAPI Diff with Direct Piping
+        shell: bash
         run: |
           # Define the filter using the native startswith() syntax
-          FILTER_CONDITION='
-          .paths |= with_entries(select(
-              (.key | startswith("/v1/inference")) or
-              (.key | startswith("/v1/vector-io")) or
-              (.key | startswith("/v1/vector-dbs")) or
-              (.key | startswith("/v1/openai/v1/responses")) or
-              (.key | startswith("/v1/openai/chat"))
-          ))
-          '
+          FILTER_CONDITION=".paths |= with_entries(select(.key | test(\"^/(v1/inference|v1/vector-io|v1/vector-dbs|v1/openai/v1/responses|v1/openai/chat)\")))"
 
-          # Use the modern yq to filter the files directly
-          yq eval "$FILTER_CONDITION" base/docs/_static/llama-stack-spec.yaml > base-filtered.yaml
-          yq eval "$FILTER_CONDITION" docs/_static/llama-stack-spec.yaml > revision-filtered.yaml
-
-
-      - name: Run OpenAPI Diff on Filtered Schemas
-        uses: ./.github/actions/openapi-diff
-        with:
-          old-spec: 'base-filtered.yaml'
-          new-spec: 'revision-filtered.yaml'
+          which yq
+          yq --version
+          echo "Filter condition: $FILTER_CONDITION"
+          
+          # Verify source files exist
+          echo "=== SOURCE FILES VERIFICATION ==="
+          echo "base/docs/_static/llama-stack-spec.yaml exists: $([ -f "base/docs/_static/llama-stack-spec.yaml" ] && echo "YES" || echo "NO")"
+          echo "docs/_static/llama-stack-spec.yaml exists: $([ -f "docs/_static/llama-stack-spec.yaml" ] && echo "YES" || echo "NO")"
+          
+          if [ ! -f "base/docs/_static/llama-stack-spec.yaml" ] || [ ! -f "docs/_static/llama-stack-spec.yaml" ]; then
+            echo "ERROR: Required spec files not found"
+            exit 1
+          fi
+          
+          # Run openapi-diff with direct piping of yq outputs
+          # This eliminates the need to write intermediate JSON files to disk
+          echo "Running OpenAPI diff with direct piping..."
+          
+          docker run --rm \
+            -v "$(pwd):/workspace" \
+            -w /workspace \
+            openapitools/openapi-diff:2.0.1 \
+            <(yq eval -o=json "$FILTER_CONDITION" base/docs/_static/llama-stack-spec.yaml) \
+            <(yq eval -o=json "$FILTER_CONDITION" docs/_static/llama-stack-spec.yaml) \
+            --fail-on-incompatible
+          
+          echo "OpenAPI diff completed successfully"
