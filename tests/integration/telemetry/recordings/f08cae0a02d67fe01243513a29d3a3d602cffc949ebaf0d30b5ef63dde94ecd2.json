@@ -1,0 +1,58 @@
+{
+  "test_id": "tests/integration/telemetry/test_inference_metrics.py::test_tokens_per_second_calculation[txt=ollama/llama3.2:3b-instruct-fp16]",
+  "request": {
+    "method": "POST",
+    "url": "http://0.0.0.0:11434/v1/v1/chat/completions",
+    "headers": {},
+    "body": {
+      "model": "llama3.2:3b-instruct-fp16",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Test token calculation"
+        }
+      ],
+      "stream": false
+    },
+    "endpoint": "/v1/chat/completions",
+    "model": "llama3.2:3b-instruct-fp16"
+  },
+  "response": {
+    "body": {
+      "__type__": "openai.types.chat.chat_completion.ChatCompletion",
+      "__data__": {
+        "id": "rec-f08cae0a02d6",
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "logprobs": null,
+            "message": {
+              "content": "# Token Calculation Test\n\nThis script calculates the number of tokens that should be generated based on a given price per token and a target amount of funds.\n\n## Requirements\n\n- Python 3.8+\n\n## Code\n```python\nclass TokenCalculator:\n    def calculate_tokens(self, price_per_token, target_amount):\n        \"\"\"\n        Calculates the number of tokens to generate to reach the target amount.\n\n        Args:\n        - price_per_token (float): The price per token in the respective currency.\n        - target_amount (float): The target amount of funds.\n\n        Returns:\n        - tokens_to_generate (int): The number of tokens that should be generated.\n        \"\"\"\n        if not isinstance(price_per_token, (int, float)) or not isinstance(target_amount, (int, float)):\n            raise ValueError(\"Price per token and target amount must be numbers\")\n        \n        if price_per_token <= 0:\n            raise ValueError(\"Price per token cannot be less than or equal to zero\")\n\n        if target_amount < 1:\n            raise ValueError(\"Target amount must be one dollar amount\")\n\n        tokens_to_generate = int(target_amount / price_per_token)\n        return tokens_to_generate\n\n\n# Test cases\ncalculator = TokenCalculator()\n\ntry:\n    # Case 1: Valid input\n    print(calculator.calculate_tokens(0.05, 100))\n\nexcept ValueError as e:\n    print(e)\n\ntry:\n    # Case 2: Zero as price per token\n    print(calculator.calculate_tokens(5, 10))\n\nexcept ValueError as e:\n    print(e)\n\ntry:\n    # Case 3: Invalid type for either input\n    calculator.calculate_tokens(\"5\", \"ten\")\n\nexcept ValueError as e:\n    print(e)\n\ntry:\n    # Case 4: Target amount less than $0\n    print(calculator.calculate_tokens(0.005, -10))\n\nexcept ValueError as e:\n    print(e)\n```\n\n## Explanation\n\n*   Define a `TokenCalculator` class that contains the `calculate_tokens` method.\n*   Check for the type of inputs and raise an error if they are not numbers or the price is less than or equal to zero.\n*   Calculate the number of tokens by dividing the target amount by the price per token and ensuring it's an integer.",
+              "refusal": null,
+              "role": "assistant",
+              "annotations": null,
+              "audio": null,
+              "function_call": null,
+              "tool_calls": null
+            }
+          }
+        ],
+        "created": 0,
+        "model": "llama3.2:3b-instruct-fp16",
+        "object": "chat.completion",
+        "service_tier": null,
+        "system_fingerprint": "fp_ollama",
+        "usage": {
+          "completion_tokens": 462,
+          "prompt_tokens": 28,
+          "total_tokens": 490,
+          "completion_tokens_details": null,
+          "prompt_tokens_details": null
+        }
+      }
+    },
+    "is_streaming": false
+  },
+  "id_normalization_mapping": {}
+}
