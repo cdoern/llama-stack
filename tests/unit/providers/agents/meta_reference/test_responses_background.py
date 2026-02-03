@@ -58,7 +58,7 @@ class TestResponseStatus:
 
     @pytest.mark.parametrize(
         "status",
-        ["queued", "in_progress", "completed", "failed", "incomplete"],
+        ["queued", "in_progress", "completed", "failed", "cancelled", "incomplete"],
     )
     def test_valid_status_values(self, status):
         """Verify all OpenAI-compatible status values are accepted."""
@@ -68,7 +68,7 @@ class TestResponseStatus:
             model="test-model",
             status=status,
             output=[],
-            background=True if status in ("queued", "in_progress") else False,
+            background=True if status in ("queued", "in_progress", "cancelled") else False,
             store=True,
         )
         assert response.status == status
@@ -85,6 +85,20 @@ class TestResponseStatus:
             store=True,
         )
         assert response.status == "queued"
+        assert response.background is True
+
+    def test_cancelled_status_with_background(self):
+        """Verify cancelled status is typically used with background=True."""
+        response = OpenAIResponseObject(
+            id="resp_123",
+            created_at=1234567890,
+            model="test-model",
+            status="cancelled",
+            output=[],
+            background=True,
+            store=True,
+        )
+        assert response.status == "cancelled"
         assert response.background is True
 
 

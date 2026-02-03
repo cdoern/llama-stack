@@ -795,6 +795,28 @@ class OpenAIResponsesImpl:
             except Exception as update_error:
                 logger.exception(f"Failed to update response {response_id} with error status: {update_error}")
 
+    async def cancel_openai_response(self, response_id: str) -> OpenAIResponseObject:
+        """Cancel a background response.
+
+        Only responses created with background=true can be cancelled.
+        """
+        response = await self.responses_store.get_response_object(response_id)
+
+        if not response.background:
+            raise ValueError(f"Response {response_id} was not created with background=true and cannot be cancelled")
+
+        if response.status not in ("queued", "in_progress"):
+            raise ValueError(
+                f"Response {response_id} has status '{response.status}' and cannot be cancelled. "
+                "Only responses with status 'queued' or 'in_progress' can be cancelled."
+            )
+
+        # Update status to cancelled
+        response.status = "cancelled"
+        await self.responses_store.update_response_object(response)
+
+        return response
+
     async def _create_streaming_response(
         self,
         input: str | list[OpenAIResponseInput],

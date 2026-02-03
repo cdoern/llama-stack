@@ -65,6 +65,71 @@ class TestBackgroundResponses:
 
         pytest.fail(f"Background response did not complete within {max_wait} seconds")
 
+    def test_cancel_background_response(self, responses_client, text_model_id):
+        """Test cancelling a background response."""
+        # Create a background response with a longer prompt to give time to cancel
+        response = responses_client.responses.create(
+            model=text_model_id,
+            input="Write a very long and detailed story about a dragon who learns to code. Include many chapters.",
+            background=True,
+        )
+
+        assert response.status == "queued"
+        response_id = response.id
+
+        # Cancel the response
+        cancelled = responses_client.responses.cancel(response_id=response_id)
+
+        assert cancelled.status == "cancelled"
+        assert cancelled.background is True
+        assert cancelled.id == response_id
+
+    def test_cannot_cancel_non_background_response(self, responses_client, text_model_id):
+        """Test that non-background responses cannot be cancelled."""
+        response = responses_client.responses.create(
+            model=text_model_id,
+            input="Hello",
+            background=False,
+        )
+
+        assert response.status == "completed"
+        assert response.background is False
+
+        # Attempting to cancel should raise an error
+        with pytest.raises(Exception) as exc_info:
+            responses_client.responses.cancel(response_id=response.id)
+
+        assert "cannot be cancelled" in str(exc_info.value).lower()
+
+    def test_cannot_cancel_completed_background_response(self, responses_client, text_model_id):
+        """Test that completed background responses cannot be cancelled."""
+        response = responses_client.responses.create(
+            model=text_model_id,
+            input="Say hi",
+            background=True,
+        )
+
+        response_id = response.id
+
+        # Wait for completion
+        max_wait = 60
+        poll_interval = 1
+        elapsed = 0
+
+        while elapsed < max_wait:
+            time.sleep(poll_interval)
+            elapsed += poll_interval
+
+            retrieved = responses_client.responses.retrieve(response_id=response_id)
+            if retrieved.status == "completed":
+                break
+
+        # Now try to cancel the completed response
+        with pytest.raises(Exception) as exc_info:
+            responses_client.responses.cancel(response_id=response_id)
+
+        assert "cannot be cancelled" in str(exc_info.value).lower()
+
     def test_background_and_stream_mutually_exclusive(self, responses_client, text_model_id):
         """Test that background=True and stream=True cannot be used together."""
         with pytest.raises(Exception) as exc_info:
