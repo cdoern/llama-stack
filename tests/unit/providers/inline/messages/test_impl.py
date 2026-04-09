@@ -17,6 +17,7 @@ from llama_stack_api.messages.models import (
     AnthropicCreateMessageRequest,
     AnthropicMessage,
     AnthropicTextBlock,
+    AnthropicThinkingConfig,
     AnthropicToolDef,
     AnthropicToolResultBlock,
     AnthropicToolUseBlock,
@@ -188,6 +189,33 @@ class TestRequestTranslation:
         result = impl._anthropic_to_openai(request)
         assert result.model_extra.get("top_k") == 40
 
+    def test_thinking_not_forwarded_in_translation(self, impl):
+        """Verify thinking parameter is not forwarded to OpenAI (no equivalent)."""
+        request = AnthropicCreateMessageRequest(
+            model="m",
+            messages=[AnthropicMessage(role="user", content="Hi")],
+            max_tokens=100,
+            thinking=AnthropicThinkingConfig(type="enabled", budget_tokens=1000),
+        )
+        result = impl._anthropic_to_openai(request)
+        # thinking should not appear in extra_body or anywhere else
+        assert "thinking" not in (result.model_extra or {})
+        assert not hasattr(result, "thinking")
+
+    def test_thinking_included_in_passthrough_body(self):
+        """Verify thinking parameter is included when serializing for passthrough."""
+        request = AnthropicCreateMessageRequest(
+            model="m",
+            messages=[AnthropicMessage(role="user", content="Solve this problem")],
+            max_tokens=2000,
+            thinking=AnthropicThinkingConfig(type="enabled", budget_tokens=5000),
+        )
+        body = request.model_dump(exclude_none=True)
+
+        assert "thinking" in body
+        assert body["thinking"]["type"] == "enabled"
+        assert body["thinking"]["budget_tokens"] == 5000
+
 
 class TestResponseTranslation:
     def test_simple_text_response(self, impl):
@@ -346,3 +374,23 @@ class TestStreamingTranslation:
 
         msg_delta = [e for e in events if e.type == "message_delta"]
         assert msg_delta[0].delta.stop_reason == "tool_use"
+
+    async def test_thinking_block_passthrough_parsing(self, impl):
+        """Test parsing of thinking blocks from passthrough SSE events (Ollama/vLLM)."""
+        # Test content_block_start with thinking
+        thinking_start_event = impl._parse_sse_event(
+            "content_block_start",
+            {"index": 0, "content_block": {"type": "thinking", "thinking": ""}},
+        )
+        assert thinking_start_event.type == "content_block_start"
+        assert thinking_start_event.content_block.type == "thinking"
+        assert thinking_start_event.content_block.thinking == ""
+
+        # Test content_block_delta with thinking_delta
+        thinking_delta_event = impl._parse_sse_event(
+            "content_block_delta",
+            {"index": 0, "delta": {"type": "thinking_delta", "thinking": "Let me consider..."}},
+        )
+        assert thinking_delta_event.type == "content_block_delta"
+        assert hasattr(thinking_delta_event.delta, "thinking")
+        assert thinking_delta_event.delta.thinking == "Let me consider..."
